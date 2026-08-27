@@ -5,8 +5,8 @@ Android and iPhone/iPad.
 
 ## Quick start (Android)
 
-1. **Double-click `screenmirror.exe`.** Nothing to install — it works
-   immediately.
+1. **[Download screenmirror.exe](https://github.com/elshaddai01/screenmirror/releases/latest/download/screenmirror.exe)**
+   and double-click it. Nothing to install — it works immediately.
 2. **Plug your phone into the PC with a USB cable.**
 3. **Tap "Allow" on your phone** when it asks about USB debugging.
 
