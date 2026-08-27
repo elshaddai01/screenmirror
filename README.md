@@ -27,14 +27,6 @@ below for Wi-Fi and iOS instructions.
   so multiple iPhones/iPads can mirror to this PC at once, each getting its
   own titled, tiled window (title/position are applied via Win32 window
   APIs, since UxPlay itself doesn't expose that).
-- Advertises a QR code (Settings → Developer options → Wireless debugging →
-  **Pair device with QR code**) that pairs a phone over Wi-Fi with zero
-  typing, using a from-scratch Go implementation of Android's ADB TLS
-  pairing protocol (SPAKE2 over Curve25519 + AES-128-GCM, ported from AOSP's
-  `pairing_auth`/`pairing_connection` C++ source and cross-checked against
-  BoringSSL's `spake25519.cc`). Once paired, the phone trusts this PC's own
-  adb key, so adb's built-in mDNS auto-connect picks it up with no further
-  prompts.
 - Cleans up automatically: when a device disconnects, its window closes and
   its child process is killed — no orphaned scrcpy/uxplay processes.
 - Detects missing dependencies at startup and prints exact install commands
@@ -77,7 +69,7 @@ No arguments required. Flags, all optional:
 
 - `-v` — verbose/debug logging
 - `-ios-pool N` — number of simultaneous AirPlay receiver slots (default 2)
-- `-name NAME` — the AirPlay/pairing name advertised on the network (default
+- `-name NAME` — the AirPlay receiver name advertised on the network (default
   `ScreenMirror-<hostname>`)
 
 ## How to mirror any phone
@@ -117,53 +109,7 @@ platform/connection type requires.
   something else — Android Studio, Vysor, another scrcpy GUI) are the most
   common cause. Close the duplicate and reconnect the cable.
 
-### Android — wireless, QR pairing (recommended, Android 11+)
-
-This is the true zero-typing path: ScreenMirror advertises itself and prints
-a QR code the instant it starts (as long as `adb.exe` was found and
-`~/.android/adbkey.pub` exists — it's created automatically the first time
-adb ever runs, including the very first USB connection above).
-
-1. Make sure the phone is on the **same Wi-Fi network** as this PC (not
-   mobile data, not a guest/isolated Wi-Fi network — see troubleshooting
-   below).
-2. On the phone: **Settings → Developer options → Wireless debugging → Pair
-   device with QR code**.
-3. Scan the QR code shown in the ScreenMirror console window.
-4. That's it — no code to read or type. The mirror window appears within a
-   few seconds once pairing completes.
-
-**If nothing happens:**
-- **Phone says it can't find the code / scan times out** — almost always a
-  network isolation issue: many home routers put Wi-Fi and "Guest" networks
-  (or a phone's own separate 5GHz/2.4GHz "network") on isolated VLANs where
-  mDNS broadcasts don't cross. Confirm the PC and phone show the *same*
-  Wi-Fi network name, and disable any router "AP/client isolation" or
-  "guest network" setting. Corporate/public Wi-Fi very often blocks this
-  outright — a phone hotspot or home network is the reliable fallback.
-- **Windows Firewall prompt appeared for `screenmirror.exe`** — click
-  **Allow** (both Private and Public networks). If you missed the prompt,
-  add it manually: Windows Security → Firewall & network protection →
-  Allow an app through firewall.
-- **Scan succeeds but pairing fails / phone shows an error** — run with
-  `-v` and look for `pairing exchange failed: ...` or
-  `pairing TLS handshake failed: ...` in the log. Try again — QR pairing
-  generates a fresh one-time password each run, and stray old codes or a
-  slow network can cause a single attempt to time out; a retry usually
-  works. If it fails consistently, fall back to the manual bootstrap method
-  below, which uses a completely different, simpler code path.
-- **Paired successfully but no mirror window ever shows up** — pairing only
-  establishes *trust*; the actual connection is made automatically
-  afterwards by adb's own mDNS auto-discovery, which can take up to ~10-15
-  seconds. If it still hasn't shown up, run `adb devices -l` — if the
-  device isn't listed at all, the phone's Wireless debugging may have been
-  toggled off, or the phone went to sleep and paused Wi-Fi (keep the
-  Wireless debugging screen open on the phone the first time).
-
-### Android — wireless, manual bootstrap (works on any Android version, no QR needed)
-
-Use this if QR pairing isn't available (older Android) or isn't working on
-your network.
+### Android — wireless (Wi-Fi)
 
 1. Plug the phone in via USB once and get it authorized as in the wired
    section above.
@@ -208,10 +154,10 @@ is the only path, by Apple's own design.
 
 **If nothing happens:**
 - **PC's name doesn't show up in Screen Mirroring at all** — this is an
-  mDNS/Bonjour discovery failure, same root causes as Android QR pairing
-  above: confirm both devices are truly on the same Wi-Fi network (not
-  guest/isolated), and allow `uxplay.exe`/`screenmirror.exe` through
-  Windows Firewall (Private *and* Public) if prompted.
+  mDNS/Bonjour discovery failure: confirm both devices are truly on the
+  same Wi-Fi network (not guest/isolated), and allow
+  `uxplay.exe`/`screenmirror.exe` through Windows Firewall (Private *and*
+  Public) if prompted.
 - **Name shows up, tapping it does nothing / mirrors then immediately
   stops** — run with `-v` and check the `[airplay:...]` log lines for
   errors. This is usually a missing GStreamer plugin (rebuild UxPlay
@@ -236,8 +182,8 @@ is the only path, by Apple's own design.
   `exit status 1`/`2` in the log). Check Task Manager if this happens.
 - **Run with `-v`** any time something doesn't behave as expected — every
   connect/disconnect/error is logged with enough detail to tell you exactly
-  which stage failed (adb tracking, scrcpy launch, TLS/pairing handshake,
-  AirPlay client detection).
+  which stage failed (adb tracking, scrcpy launch, AirPlay client
+  detection).
 - **adb server conflicts:** if Android Studio, Vysor, or another scrcpy GUI
   is also running, they all share the *same* background `adb` server
   process — that's normally fine (ScreenMirror just observes its device
@@ -245,10 +191,9 @@ is the only path, by Apple's own design.
   `adb kill-server` once, then restart ScreenMirror so it starts a clean
   server itself.
 - **Firewall:** the first run may trigger a Windows Firewall prompt for
-  `screenmirror.exe` (needed for the mDNS pairing/AirPlay-discovery
-  listener) — allow it on both Private and Public networks, or wireless
-  pairing/AirPlay discovery won't work even though wired USB mirroring
-  still will.
+  `screenmirror.exe` (needed for AirPlay discovery) — allow it on both
+  Private and Public networks, or iOS discovery won't work even though
+  Android mirroring still will.
 
 ## Known limitations
 
@@ -265,11 +210,6 @@ is the only path, by Apple's own design.
   window is labeled generically. The mirroring itself is unaffected — window
   connect/disconnect is detected via the actual OS window lifecycle, not log
   parsing.
-- The QR wireless-pairing implementation reimplements Android's pairing
-  crypto from protocol documentation and AOSP source rather than calling a
-  first-party library (none is exposed by `adb.exe`), and is not
-  constant-time — an acceptable trade-off for pairing your own phone on your
-  own LAN, not a general-purpose security library.
 
 ## Project layout
 
@@ -279,7 +219,6 @@ internal/bundle/                 embedded adb.exe/scrcpy.exe, extracted on first
 internal/adbproto/               raw ADB host-protocol client (track-devices)
 internal/android/                device→scrcpy lifecycle management
 internal/ios/                    UxPlay receiver pool + window detection
-internal/pairing/                ADB wireless (QR) pairing protocol + mDNS
 internal/tile/                   window position/size grid allocator
 internal/winapi/                 Win32 window title/position/enumeration
 internal/procutil/               subprocess console-hiding helper
