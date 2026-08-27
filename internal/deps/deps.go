@@ -1,50 +1,25 @@
-// Package deps detects whether ScreenMirror's external dependencies
-// (adb.exe, scrcpy.exe, uxplay.exe) are present on PATH, and builds a clear
-// one-time setup message if not.
+// Package deps detects whether ScreenMirror's external dependencies are
+// available and builds a clear one-time setup message for whatever isn't.
+//
+// adb.exe and scrcpy.exe are embedded directly in the binary (see
+// internal/bundle) and never need installing. uxplay.exe is the one
+// remaining dependency still looked up on PATH -- see the doc comment on
+// internal/bundle for why it isn't embedded too.
 package deps
 
-import (
-	"os/exec"
-	"strings"
-)
+import "os/exec"
 
-// Check looks up each dependency on PATH. adbPath/scrcpyPath/uxplayPath are
-// "" when not found. message is non-empty (and should be printed) whenever
-// anything is missing.
-func Check() (adbPath, scrcpyPath, uxplayPath, message string) {
-	adbPath = lookup("adb")
-	scrcpyPath = lookup("scrcpy")
+// Check looks up uxplay on PATH. uxplayPath is "" when not found. message is
+// non-empty (and should be printed) when it's missing.
+func Check() (uxplayPath, message string) {
 	uxplayPath = lookup("uxplay")
-
-	var missing []string
-	if adbPath == "" {
-		missing = append(missing, adbSetup)
+	if uxplayPath != "" {
+		return uxplayPath, ""
 	}
-	if scrcpyPath == "" {
-		missing = append(missing, scrcpySetup)
-	}
-	if uxplayPath == "" {
-		missing = append(missing, uxplaySetup)
-	}
-	if len(missing) == 0 {
-		return
-	}
-
-	var b strings.Builder
-	b.WriteString("\n=== ScreenMirror: one-time setup required ===\n\n")
-	for i, m := range missing {
-		if i > 0 {
-			b.WriteString("\n")
-		}
-		b.WriteString(m)
-		b.WriteString("\n")
-	}
-	b.WriteString("\nAfter installing, restart your terminal (so PATH updates take effect) and run ScreenMirror again.\n")
-	if adbPath != "" && scrcpyPath != "" && uxplayPath == "" {
-		b.WriteString("Android mirroring will work in the meantime; only iOS AirPlay mirroring is unavailable until UxPlay is installed.\n")
-	}
-	b.WriteString("================================================\n")
-	return adbPath, scrcpyPath, uxplayPath, b.String()
+	return "", "\n=== ScreenMirror: optional setup ===\n\n" + uxplaySetup +
+		"\n\nAndroid mirroring works right now with no setup. This step is only needed\n" +
+		"for iOS AirPlay mirroring; restart your terminal after installing and run\n" +
+		"ScreenMirror again.\n================================================\n"
 }
 
 func lookup(name string) string {
@@ -54,19 +29,6 @@ func lookup(name string) string {
 	}
 	return p
 }
-
-const adbSetup = `- ADB (adb.exe) not found on PATH. Needed for Android device detection.
-    winget:      winget install --id Google.PlatformTools -e
-    Chocolatey:  choco install adb
-    Manual:      download "SDK Platform-Tools for Windows" from
-                 https://developer.android.com/tools/releases/platform-tools
-                 and add the extracted folder to your PATH.`
-
-const scrcpySetup = `- scrcpy (scrcpy.exe) not found on PATH. Needed to actually render the Android mirror.
-    winget:      winget install --id Genymobile.scrcpy -e
-    Chocolatey:  choco install scrcpy
-    (scrcpy bundles its own copy of adb, but ScreenMirror looks for both
-    tools on PATH independently, so make sure both resolve.)`
 
 const uxplaySetup = `- UxPlay (uxplay.exe) not found on PATH. Needed only for iOS AirPlay mirroring.
     UxPlay has no winget/Chocolatey package on Windows; build it yourself:

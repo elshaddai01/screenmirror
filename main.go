@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"strings"
 
+	"screenmirror/internal/bundle"
 	"screenmirror/internal/deps"
 	"screenmirror/internal/logging"
 	"screenmirror/internal/orchestrator"
@@ -28,15 +29,16 @@ func main() {
 	logger := logging.New(*verbose)
 	logger.Info("ScreenMirror starting...")
 
-	adbPath, scrcpyPath, uxplayPath, setupMsg := deps.Check()
+	adbPath, scrcpyPath, err := bundle.Extract()
+	if err != nil {
+		logger.Error("could not set up bundled adb/scrcpy: %v", err)
+	} else {
+		ensureAdbServer(adbPath, logger)
+	}
+
+	uxplayPath, setupMsg := deps.Check()
 	if setupMsg != "" {
 		fmt.Println(setupMsg)
-	}
-	if adbPath == "" || scrcpyPath == "" {
-		logger.Warn("Android mirroring cannot start without both adb.exe and scrcpy.exe on PATH")
-	}
-	if adbPath != "" {
-		ensureAdbServer(adbPath, logger)
 	}
 
 	name := *receiverName

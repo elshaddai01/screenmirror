@@ -1,10 +1,14 @@
 # ScreenMirror
 
-A zero-configuration Windows command-line tool that mirrors the live screen
-of every connected phone the moment it's plugged in or paired — Android over
-ADB/scrcpy, iOS over AirPlay/UxPlay. No commands to type after launch, no
-per-device setup beyond Android's own one-time USB trust prompt and iOS's
-own one-time-per-session AirPlay device selection.
+A zero-configuration Windows tool that mirrors the live screen of every
+connected phone the moment it's plugged in or paired — Android over
+ADB/scrcpy, iOS over AirPlay/UxPlay. **For Android, there is nothing to
+install: download `screenmirror.exe` and double-click it.** adb.exe and
+scrcpy.exe (plus every DLL they need) are embedded directly inside the
+binary and self-extract on first run — no winget, no separate download, no
+PATH setup, no admin rights. No commands to type after launch either, just
+the one-time Android USB trust prompt (or QR scan) and iOS's own
+one-time-per-session AirPlay device selection.
 
 ## What it does
 
@@ -32,29 +36,32 @@ own one-time-per-session AirPlay device selection.
 
 ## Prerequisites
 
-Install once:
+**Android: none.** `adb.exe` and `scrcpy.exe` are embedded in
+`screenmirror.exe` itself (see `internal/bundle`) and are extracted
+automatically to a per-user cache folder (`%LocalAppData%\ScreenMirror\tools`)
+the first time you run it — nothing to install, nothing on PATH, works
+completely offline.
 
-```powershell
-winget install --id Google.PlatformTools -e   # adb
-winget install --id Genymobile.scrcpy -e      # scrcpy
-```
-
-UxPlay (only needed for iOS AirPlay mirroring) has no winget/Chocolatey
-package on Windows and must be built from source via MSYS2 — see the message
-ScreenMirror itself prints on startup if `uxplay.exe` isn't found, or
-[UxPlay's README](https://github.com/FDH2/UxPlay) directly.
-
-**Restart your terminal after installing** so PATH updates take effect.
+**iOS is the one thing that still needs a one-time manual step.** UxPlay
+depends on a GStreamer runtime (100+ MB of DLLs) that's too large to bundle
+sight-unseen, has no winget/Chocolatey package on Windows, and must be built
+from source via MSYS2 — see the message ScreenMirror itself prints on
+startup if `uxplay.exe` isn't found, or
+[UxPlay's README](https://github.com/FDH2/UxPlay) directly. Skip this
+entirely if you only need Android mirroring.
 
 ## Building
 
-Requires Go 1.24+.
+Only needed if you want to build it yourself instead of using a released
+`screenmirror.exe`. Requires Go 1.24+.
 
 ```powershell
 go build -o screenmirror.exe .
 ```
 
 ## Running
+
+Double-click `screenmirror.exe`, or from a terminal:
 
 ```powershell
 .\screenmirror.exe
@@ -262,6 +269,7 @@ is the only path, by Apple's own design.
 
 ```
 main.go                          orchestrator entrypoint, dependency checks
+internal/bundle/                 embedded adb.exe/scrcpy.exe, extracted on first run
 internal/adbproto/               raw ADB host-protocol client (track-devices)
 internal/android/                device→scrcpy lifecycle management
 internal/ios/                    UxPlay receiver pool + window detection
