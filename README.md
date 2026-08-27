@@ -1,14 +1,20 @@
 # ScreenMirror
 
-A zero-configuration Windows tool that mirrors the live screen of every
-connected phone the moment it's plugged in or paired — Android over
-ADB/scrcpy, iOS over AirPlay/UxPlay. **For Android, there is nothing to
-install: download `screenmirror.exe` and double-click it.** adb.exe and
-scrcpy.exe (plus every DLL they need) are embedded directly inside the
-binary and self-extract on first run — no winget, no separate download, no
-PATH setup, no admin rights. No commands to type after launch either, just
-the one-time Android USB trust prompt (or QR scan) and iOS's own
-one-time-per-session AirPlay device selection.
+A Windows tool that shows your phone's screen on your PC, live. Works with
+Android and iPhone/iPad.
+
+## Quick start (Android)
+
+1. **Double-click `screenmirror.exe`.** Nothing to install — it works
+   immediately.
+2. **Plug your phone into the PC with a USB cable.**
+3. **Tap "Allow" on your phone** when it asks about USB debugging.
+
+Your phone's screen now shows up in its own window. That's the whole
+process — no typing, no apps to install on the phone.
+
+No cable? No iPhone? See [How to mirror any phone](#how-to-mirror-any-phone)
+below for Wi-Fi and iOS instructions.
 
 ## What it does
 
